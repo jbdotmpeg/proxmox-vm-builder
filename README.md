@@ -11,6 +11,8 @@ A modular Python orchestrator for Proxmox VE designed to quickly spin up custom 
 
 The VM builder configures the guest only. It does not change host boot settings, bind devices to VFIO, or reboot Proxmox. Complete and verify the host setup first. Keep console or out-of-band access available: binding a GPU or Wi-Fi adapter can disconnect services that depend on that device.
 
+These host-side IOMMU/VFIO steps apply to passthrough for Windows and Linux guests alike. The current `vms/bazzite-vm.sh` profile specifically creates a Bazzite VM; another operating system needs its own VM configuration and in-guest device drivers, but can use the same host preparation.
+
 1. **Enable IOMMU in firmware.** Enable Intel VT-d or AMD-Vi/IOMMU in the server BIOS/UEFI.
 
 2. **Enable IOMMU in the Proxmox kernel command line.** Preserve existing options and add the matching parameters:
@@ -31,6 +33,7 @@ The VM builder configures the guest only. It does not change host boot settings,
    After reboot, verify that IOMMU groups exist and inspect which devices share each group:
 
    ```bash
+   cat /proc/cmdline
    dmesg | grep -Ei 'DMAR|IOMMU|AMD-Vi'
    find /sys/kernel/iommu_groups -type l -print
    ```
@@ -55,4 +58,6 @@ The VM builder configures the guest only. It does not change host boot settings,
 
 5. **Keep host networking available.** A PCIe Wi-Fi adapter assigned to the VM is no longer available to Proxmox. Do not pass through the adapter carrying the host's management connection; use a separate wired or out-of-band management path.
 
-The builder requires `whiptail`, `qm`, `lspci`, and `date` and prompts for VM resources, ISO, and optional passthrough devices. Once the host is ready, run it from a Proxmox root shell and select the verified PCIe devices. The script checks IOMMU-group membership and warns about missing groups or unselected group members, but it cannot make unsafe groups isolated.
+The builder requires `whiptail`, `qm`, `lspci`, and `date` and prompts for VM resources, ISO, and optional passthrough devices. On Proxmox, `lspci` is provided by `pciutils`. Once the host is ready, run it from a Proxmox root shell and select the verified PCIe devices. The script checks IOMMU-group membership and warns about missing groups or unselected group members, but it cannot make unsafe groups isolated.
+
+For version-specific details, see the [Proxmox PCI(e) passthrough wiki](https://pve.proxmox.com/wiki/PCI_Passthrough).
