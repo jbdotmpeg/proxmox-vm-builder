@@ -393,6 +393,6 @@ main() {
     create_vm "$vm_name" "$cores" "$memory" "$disk_size" "$gpu" "$wifi" "$iso_path"
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then
     main "$@"
 fi
