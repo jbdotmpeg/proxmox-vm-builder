@@ -15,12 +15,20 @@ The VM builder configures the guest only. It does not change host boot settings,
 
 2. **Enable IOMMU in the Proxmox kernel command line.** Preserve existing options and add the matching parameters:
 
+   Run `proxmox-boot-tool status` to check whether Proxmox manages the systemd-boot entries; use the corresponding procedure below.
+
    - **GRUB:** Add `intel_iommu=on iommu=pt` for Intel, or `amd_iommu=on iommu=pt` for AMD, to `GRUB_CMDLINE_LINUX_DEFAULT` in `/etc/default/grub`; then run `update-grub`.
    - **systemd-boot:** Add the matching parameters to the existing single line in `/etc/kernel/cmdline`; then run `proxmox-boot-tool refresh`.
 
    Reboot Proxmox after changing the kernel command line.
 
-3. **Check the devices and their IOMMU groups.** Use `lspci -nnk` to identify the exact GPU and Wi-Fi PCIe functions and their vendor/device IDs. After reboot, verify that IOMMU groups exist:
+3. **Check the devices and their IOMMU groups.** Before changing bindings, record the exact GPU and Wi-Fi PCIe addresses, vendor/device IDs, and current drivers:
+
+   ```bash
+   lspci -nnk
+   ```
+
+   After reboot, verify that IOMMU groups exist and inspect which devices share each group:
 
    ```bash
    dmesg | grep -Ei 'DMAR|IOMMU|AMD-Vi'
@@ -29,7 +37,7 @@ The VM builder configures the guest only. It does not change host boot settings,
 
    All devices in a selected IOMMU group must be safe to assign together. Do not pass through a group containing host devices you still need. Avoid ACS override patches as a substitute for proper isolation in production.
 
-4. **Bind only the intended devices to VFIO when needed.** Current Proxmox kernels often load VFIO on demand; if needed, ensure `vfio`, `vfio_iommu_type1`, and `vfio_pci` are loaded during boot (for example, list them in `/etc/modules`). To bind particular PCI IDs early, create `/etc/modprobe.d/vfio.conf` with the IDs reported by `lspci -nnk`, for example:
+4. **Bind only the intended devices to VFIO when needed.** Do this only if the host driver claims a device that needs to be reserved for the VM. Current Proxmox kernels often load VFIO on demand; if needed, ensure `vfio`, `vfio_iommu_type1`, and `vfio_pci` are loaded during boot (for example, list them in `/etc/modules`). To bind particular PCI IDs early, create `/etc/modprobe.d/vfio.conf` with the IDs reported by `lspci -nnk`, for example:
 
    ```text
    options vfio-pci ids=vvvv:dddd,vvvv:dddd
@@ -43,6 +51,8 @@ The VM builder configures the guest only. It does not change host boot settings,
 
    Reboot, then use `lspci -nnk -s <PCI-address>` to confirm the intended device is using `vfio-pci`.
 
+   If a reboot leaves a required host device unavailable, use the local console, revert the VFIO ID/module changes, rebuild the initramfs, and reboot again.
+
 5. **Keep host networking available.** A PCIe Wi-Fi adapter assigned to the VM is no longer available to Proxmox. Do not pass through the adapter carrying the host's management connection; use a separate wired or out-of-band management path.
 
-Once the host is ready, run the Bazzite VM builder and select the verified PCIe devices. The script checks IOMMU-group membership and warns about missing groups or unselected group members, but it cannot make unsafe groups isolated.
+The builder requires `whiptail`, `qm`, `lspci`, and `date` and prompts for VM resources, ISO, and optional passthrough devices. Once the host is ready, run it from a Proxmox root shell and select the verified PCIe devices. The script checks IOMMU-group membership and warns about missing groups or unselected group members, but it cannot make unsafe groups isolated.
