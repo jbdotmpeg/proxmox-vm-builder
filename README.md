@@ -13,6 +13,8 @@ The VM builder configures the guest only. It does not change host boot settings,
 
 These host-side IOMMU/VFIO steps apply to passthrough for Windows and Linux guests alike. The current `vms/bazzite-vm.sh` profile specifically creates a Bazzite VM; another operating system needs its own VM configuration and in-guest device drivers, but can use the same host preparation.
 
+**Automated option:** run `host-setup.sh` (or menu option 4 in `install.sh`) as root on the Proxmox host. It detects Proxmox, CPU vendor, boot loader, IOMMU state and VFIO modules, and with confirmation applies steps 2 and 4's module loading (not per-device ID binding). Firmware IOMMU (step 1) must still be enabled manually.
+
 1. **Enable IOMMU in firmware.** Enable Intel VT-d or AMD-Vi/IOMMU in the server BIOS/UEFI.
 
 2. **Enable IOMMU in the Proxmox kernel command line.** Preserve existing options and add the matching parameters:

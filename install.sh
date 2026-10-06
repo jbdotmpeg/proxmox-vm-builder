@@ -24,11 +24,12 @@ if ! command -v whiptail &> /dev/null; then
     exit 1
 fi
 
-CHOICE=$(whiptail --title "Proxmox VM Builder" --menu "Select Deployment Profile" 15 60 4 \
+CHOICE=$(whiptail --title "Proxmox VM Builder" --menu "Select Deployment Profile" 16 64 5 \
     "1" "Deploy Bazzite Gaming VM (with GPU/Wi-Fi Passthrough)" \
     "2" "Deploy Generic Linux VM" \
     "3" "Deploy Automated Windows 11 VM" \
-    "4" "Exit" 3>&1 1>&2 2>&3)
+    "4" "Detect & Configure Proxmox Host (IOMMU/VFIO)" \
+    "5" "Exit" 3>&1 1>&2 2>&3)
 
 case $CHOICE in
     1)
@@ -42,6 +43,10 @@ case $CHOICE in
     3)
         echo "Fetching Windows VM Script..."
         bash -c "$(wget -qLO - https://raw.githubusercontent.com/jbdotmpeg/proxmox-vm-builder/main/vms/windows-vm.sh)"
+        ;;
+    4)
+        echo "Fetching Proxmox host setup script..."
+        bash -c "$(wget -qLO - https://raw.githubusercontent.com/jbdotmpeg/proxmox-vm-builder/main/host-setup.sh)"
         ;;
     *)
         exit 0
