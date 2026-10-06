@@ -14,14 +14,14 @@ while IFS= read -r line; do
     if [[ -n "$line" ]]; then
         addr=$(echo "$line" | awk '{print $1}')
         desc=$(echo "$line" | cut -d' ' -f2-)
-        GPU_OPTIONS+=("$addr" "$desc")
+        GPU_OPTIONS+=("$addr" "$desc" "OFF")
     fi
 done < <(lspci -nn | grep -E -i "vga|3d|display")
 
 if [ ${#GPU_OPTIONS[@]} -gt 0 ]; then
-    GPU_PCI=$(whiptail --title "GPU Selection" --menu "Select GPU to pass through:" 15 80 6 "${GPU_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    GPU_PCI=$(whiptail --title "GPU Selection" --radiolist "Select GPU to pass through:" 15 80 6 "${GPU_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
-    GPU_PCI=$(whiptail --inputbox "No GPUs auto-detected. Enter GPU PCIe Address manually (e.g., 0a:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
+    GPU_PCI=$(whiptail --inputbox "No GPUs auto-detected. Enter GPU PCIe Address manually (e.g., 09:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
 # Build Wi-Fi options dynamically
@@ -30,14 +30,14 @@ while IFS= read -r line; do
     if [[ -n "$line" ]]; then
         addr=$(echo "$line" | awk '{print $1}')
         desc=$(echo "$line" | cut -d' ' -f2-)
-        WIFI_OPTIONS+=("$addr" "$desc")
+        WIFI_OPTIONS+=("$addr" "$desc" "OFF")
     fi
 done < <(lspci -nn | grep -E -i "network|wireless|wi-fi")
 
 if [ ${#WIFI_OPTIONS[@]} -gt 0 ]; then
-    WIFI_PCI=$(whiptail --title "Wi-Fi Selection" --menu "Select Wi-Fi adapter to pass through:" 15 80 6 "${WIFI_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    WIFI_PCI=$(whiptail --title "Wi-Fi Selection" --radiolist "Select Wi-Fi adapter to pass through:" 15 80 6 "${WIFI_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
-    WIFI_PCI=$(whiptail --inputbox "No Wi-Fi auto-detected. Enter Wi-Fi PCIe Address manually (e.g., 0b:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
+    WIFI_PCI=$(whiptail --inputbox "No Wi-Fi auto-detected. Enter Wi-Fi PCIe Address manually (e.g., 0a:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
 echo "Creating VM $VMID ($VM_NAME)..."
@@ -57,7 +57,7 @@ qm set "$VMID" --scsihw virtio-scsi-pci
 qm set "$VMID" --scsi0 local-lvm:64,discard=on,ssd=1
 
 qm set "$VMID" --net0 virtio,bridge=vmbr0,firewall=1
-qm set "$VMID--ide2 local:iso/bazzite-deck-stable-live-amd64.iso,media=cdrom"
+qm set "$VMID" --ide2 local:iso/bazzite-deck-stable-live-amd64.iso,media=cdrom
 qm set "$VMID" --boot order=ide2\;scsi0
 
 if [ -n "${GPU_PCI:-}" ]; then
