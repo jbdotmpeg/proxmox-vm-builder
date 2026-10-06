@@ -1,0 +1,19 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check
+        run: for f in install.sh host-setup.sh update-checksums.sh vms/*.sh; do bash -n "$f"; done
+      - name: ShellCheck
+        run: shellcheck -S warning install.sh host-setup.sh update-checksums.sh vms/*.sh
+      - name: Checksums are current
+        run: ./update-checksums.sh && git diff --exit-code SHA256SUMS
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Tests
+        run: bats tests

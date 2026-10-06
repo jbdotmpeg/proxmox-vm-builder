@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Bazzite OS VM Deployer with Automatic PCIe Passthrough Discovery
+# Generic Linux VM Deployer with Automatic PCIe Passthrough Discovery
 
 set -Eeuo pipefail
 
 readonly DEFAULT_CORES=4
 readonly DEFAULT_MEMORY=8192
 readonly DEFAULT_DISK=64
-readonly DEFAULT_VMID=135
-readonly DEFAULT_VM_NAME="bazzite-gaming-vm"
-readonly ISO_HINT_REGEX='bazzite'
-readonly DEFAULT_ISO="local:iso/bazzite-deck-stable-live-amd64.iso"
+readonly DEFAULT_VMID=136
+readonly DEFAULT_VM_NAME="linux-vm"
+readonly ISO_HINT_REGEX='ubuntu|debian|fedora|arch|mint|opensuse|rocky|alma|linux'
+readonly DEFAULT_ISO=""
 
 VM_CREATED=0
 VMID=""
@@ -391,14 +391,14 @@ create_vm() {
         run_qm qm set "$VMID" --hostpci1 "${wifi},pcie=1"
     fi
 
-    log_success "Successfully created Bazzite VM ID $VMID."
+    log_success "Successfully created Linux VM ID $VMID."
     log_info "Start the VM with: qm start $VMID"
 }
 
 main() {
     check_dependencies
     check_host_ready || return 1
-    log_info "=== Bazzite OS VM Builder ==="
+    log_info "=== Linux OS VM Builder ==="
 
     local vm_name cores memory disk_size gpu="" wifi="" iso_path="" status
     if ! VMID=$(prompt_numeric "VM ID" "$DEFAULT_VMID" 100 999999999); then
@@ -457,7 +457,7 @@ main() {
     log_info "=== Configuration Summary ==="
     log_info "VM ID: $VMID | Name: $vm_name | CPU: $cores cores | Memory: ${memory} MB | Disk: ${disk_size} GB"
     log_info "GPU: ${gpu:-none} | Wi-Fi: ${wifi:-none} | ISO: ${iso_path:-none}"
-    if ! whiptail --yesno "$(printf 'Create this Bazzite VM with the following configuration?\n\n%s' "$summary")" 18 75; then
+    if ! whiptail --yesno "$(printf 'Create this Linux VM with the following configuration?\n\n%s' "$summary")" 18 75; then
         log_info "VM creation cancelled."
         return 0
     fi

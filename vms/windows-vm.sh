@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Bazzite OS VM Deployer with Automatic PCIe Passthrough Discovery
+# Windows 11 VM Deployer with Automatic PCIe Passthrough Discovery
 
 set -Eeuo pipefail
 
 readonly DEFAULT_CORES=4
-readonly DEFAULT_MEMORY=8192
-readonly DEFAULT_DISK=64
-readonly DEFAULT_VMID=135
-readonly DEFAULT_VM_NAME="bazzite-gaming-vm"
-readonly ISO_HINT_REGEX='bazzite'
-readonly DEFAULT_ISO="local:iso/bazzite-deck-stable-live-amd64.iso"
+readonly DEFAULT_MEMORY=16384
+readonly DEFAULT_DISK=128
+readonly DEFAULT_VMID=137
+readonly DEFAULT_VM_NAME="windows-vm"
+readonly ISO_HINT_REGEX='win|virtio'
+readonly DEFAULT_ISO=""
 
 VM_CREATED=0
 VMID=""
@@ -362,7 +362,7 @@ create_vm() {
 
     log_info "Creating VM $VMID ($vm_name): $cores cores, ${memory} MB RAM, ${disk_size} GB disk."
     if qm create "$VMID" --name "$vm_name" \
-        --machine q35 --bios ovmf --ostype l26 --cpu host \
+        --machine q35 --bios ovmf --ostype win11 --cpu host \
         --cores "$cores" --sockets 1 --memory "$memory" --agent 1; then
         VM_CREATED=1
     else
@@ -371,6 +371,7 @@ create_vm() {
     fi
 
     run_qm qm set "$VMID" --efidisk0 local-lvm:1,format=raw,pre-enrolled-keys=1
+    run_qm qm set "$VMID" --tpmstate0 local-lvm:1,version=v2.0
     run_qm qm set "$VMID" --scsihw virtio-scsi-pci
     run_qm qm set "$VMID" --scsi0 "local-lvm:${disk_size},discard=on,ssd=1"
     run_qm qm set "$VMID" --net0 virtio,bridge=vmbr0,firewall=1
@@ -391,14 +392,14 @@ create_vm() {
         run_qm qm set "$VMID" --hostpci1 "${wifi},pcie=1"
     fi
 
-    log_success "Successfully created Bazzite VM ID $VMID."
+    log_success "Successfully created Windows VM ID $VMID."
     log_info "Start the VM with: qm start $VMID"
 }
 
 main() {
     check_dependencies
     check_host_ready || return 1
-    log_info "=== Bazzite OS VM Builder ==="
+    log_info "=== Windows OS VM Builder ==="
 
     local vm_name cores memory disk_size gpu="" wifi="" iso_path="" status
     if ! VMID=$(prompt_numeric "VM ID" "$DEFAULT_VMID" 100 999999999); then
@@ -457,7 +458,7 @@ main() {
     log_info "=== Configuration Summary ==="
     log_info "VM ID: $VMID | Name: $vm_name | CPU: $cores cores | Memory: ${memory} MB | Disk: ${disk_size} GB"
     log_info "GPU: ${gpu:-none} | Wi-Fi: ${wifi:-none} | ISO: ${iso_path:-none}"
-    if ! whiptail --yesno "$(printf 'Create this Bazzite VM with the following configuration?\n\n%s' "$summary")" 18 75; then
+    if ! whiptail --yesno "$(printf 'Create this Windows VM with the following configuration?\n\n%s' "$summary")" 18 75; then
         log_info "VM creation cancelled."
         return 0
     fi
