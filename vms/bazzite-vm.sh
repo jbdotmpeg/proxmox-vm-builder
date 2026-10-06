@@ -8,36 +8,36 @@ echo "=== Bazzite OS VM Builder ==="
 VMID=$(whiptail --inputbox "Enter VM ID for Bazzite:" 10 50 "135" 3>&1 1>&2 2>&3)
 VM_NAME=$(whiptail --inputbox "Enter VM Name:" 10 50 "bazzite-gaming-vm" 3>&1 1>&2 2>&3)
 
-# Build GPU options dynamically
+# Build GPU options dynamically (Pairs for --menu)
 GPU_OPTIONS=()
 while IFS= read -r line; do
     if [[ -n "$line" ]]; then
         addr=$(echo "$line" | awk '{print $1}')
         desc=$(echo "$line" | cut -d' ' -f2-)
-        GPU_OPTIONS+=("$addr" "$desc" "OFF")
+        GPU_OPTIONS+=("$addr" "$desc")
     fi
 done < <(lspci -nn | grep -E -i "vga|3d|display")
 
 if [ ${#GPU_OPTIONS[@]} -gt 0 ]; then
-    GPU_PCI=$(whiptail --title "GPU Selection" --radiolist "Select GPU to pass through:" 15 80 6 "${GPU_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    GPU_PCI=$(whiptail --title "GPU Selection" --menu "Select GPU to pass through:" 15 80 6 "${GPU_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
     GPU_PCI=$(whiptail --inputbox "No GPUs auto-detected. Enter GPU PCIe Address manually (e.g., 09:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
-# Build Wi-Fi options dynamically
+# Build Wi-Fi options dynamically (Pairs for --menu)
 WIFI_OPTIONS=()
 while IFS= read -r line; do
     if [[ -n "$line" ]]; then
         addr=$(echo "$line" | awk '{print $1}')
         desc=$(echo "$line" | cut -d' ' -f2-)
-        WIFI_OPTIONS+=("$addr" "$desc" "OFF")
+        WIFI_OPTIONS+=("$addr" "$desc")
     fi
 done < <(lspci -nn | grep -E -i "network|wireless|wi-fi")
 
 if [ ${#WIFI_OPTIONS[@]} -gt 0 ]; then
-    WIFI_PCI=$(whiptail --title "Wi-Fi Selection" --radiolist "Select Wi-Fi adapter to pass through:" 15 80 6 "${WIFI_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    WIFI_PCI=$(whiptail --title "Wi-Fi Selection" --menu "Select Wi-Fi adapter to pass through:" 15 80 6 "${WIFI_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
-    WIFI_PCI=$(whiptail --inputbox "No Wi-Fi auto-detected. Enter Wi-Fi PCIe Address manually (e.g., 0a:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
+WIFI_PCI=$(whiptail --inputbox "No Wi-Fi auto-detected. Enter Wi-Fi PCIe Address manually (e.g., 0a:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
 echo "Creating VM $VMID ($VM_NAME)..."
