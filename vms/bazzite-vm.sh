@@ -3,49 +3,45 @@
 
 set -euo pipefail
 
-echo "=== Bazzite OS VM Builder (Auto-Discovery) ==="
+echo "=== Bazzite OS VM Builder ==="
 
-# 1. Basic VM parameters
 VMID=$(whiptail --inputbox "Enter VM ID for Bazzite:" 10 50 "135" 3>&1 1>&2 2>&3)
 VM_NAME=$(whiptail --inputbox "Enter VM Name:" 10 50 "bazzite-gaming-vm" 3>&1 1>&2 2>&3)
 
-# 2. Automatically Scan GPUs (VGA / 3D Controllers)
+# Build GPU options dynamically
 GPU_OPTIONS=()
-while read -r line; do
-    if [ -n "$line" ]; then
-        pci_addr=$(echo "$line" | awk '{print $1}')
-        pci_desc=$(echo "$line" | cut -d' ' -f2-)
-        GPU_OPTIONS+=("$pci_addr" "$pci_desc")
+while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+        addr=$(echo "$line" | awk '{print $1}')
+        desc=$(echo "$line" | cut -d' ' -f2-)
+        GPU_OPTIONS+=("$addr" "$desc")
     fi
-done < <(lspci -nn | grep -E "VGA|3D")
+done < <(lspci -nn | grep -E -i "vga|3d|display")
 
-GPU_PCI=""
 if [ ${#GPU_OPTIONS[@]} -gt 0 ]; then
     GPU_PCI=$(whiptail --title "GPU Selection" --menu "Select GPU to pass through:" 15 80 6 "${GPU_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
-    echo "No GPU devices found via lspci."
+    GPU_PCI=$(whiptail --inputbox "No GPUs auto-detected. Enter GPU PCIe Address manually (e.g., 0a:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
-# 3. Automatically Scan Wi-Fi / Network Wireless Controllers
+# Build Wi-Fi options dynamically
 WIFI_OPTIONS=()
-while read -r line; do
-    if [ -n "$line" ]; then
-        pci_addr=$(echo "$line" | awk '{print $1}')
-        pci_desc=$(echo "$line" | cut -d' ' -f2-)
-        WIFI_OPTIONS+=("$pci_addr" "$pci_desc")
+while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+        addr=$(echo "$line" | awk '{print $1}')
+        desc=$(echo "$line" | cut -d' ' -f2-)
+        WIFI_OPTIONS+=("$addr" "$desc")
     fi
-done < <(lspci -nn | grep -E "Network|Wireless")
+done < <(lspci -nn | grep -E -i "network|wireless|wi-fi")
 
-WIFI_PCI=""
 if [ ${#WIFI_OPTIONS[@]} -gt 0 ]; then
     WIFI_PCI=$(whiptail --title "Wi-Fi Selection" --menu "Select Wi-Fi adapter to pass through:" 15 80 6 "${WIFI_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 else
-    echo "No Wi-Fi devices found via lspci."
+    WIFI_PCI=$(whiptail --inputbox "No Wi-Fi auto-detected. Enter Wi-Fi PCIe Address manually (e.g., 0b:00.0):" 10 50 "" 3>&1 1>&2 2>&3)
 fi
 
 echo "Creating VM $VMID ($VM_NAME)..."
 
-# 4. Create base VM configuration
 qm create "$VMID" --name "$VM_NAME" \
     --machine q35 \
     --bios ovmf \
@@ -56,25 +52,22 @@ qm create "$VMID" --name "$VM_NAME" \
     --memory 8192 \
     --agent 1
 
-# 5. EFI and Storage
 qm set "$VMID" --efidisk0 local-lvm:1,format=raw,pre-enrolled-keys=1
 qm set "$VMID" --scsihw virtio-scsi-pci
 qm set "$VMID" --scsi0 local-lvm:64,discard=on,ssd=1
 
-# 6. Network and ISO
 qm set "$VMID" --net0 virtio,bridge=vmbr0,firewall=1
-qm set "$VMID" --ide2 local:iso/bazzite-deck-stable-live-amd64.iso,media=cdrom
+qm set "$VMID--ide2 local:iso/bazzite-deck-stable-live-amd64.iso,media=cdrom"
 qm set "$VMID" --boot order=ide2\;scsi0
 
-# 7. Apply Passthrough Bindings
-if [ -n "$GPU_PCI" ]; then
+if [ -n "${GPU_PCI:-}" ]; then
     echo "Attaching GPU passthrough: $GPU_PCI"
     qm set "$VMID" --hostpci0 "${GPU_PCI},pcie=1,x-vga=1"
 fi
 
-if [ -n "$WIFI_PCI" ]; then
+if [ -n "${WIFI_PCI:-}" ]; then
     echo "Attaching Wi-Fi passthrough: $WIFI_PCI"
     qm set "$VMID" --hostpci1 "${WIFI_PCI},pcie=1"
 fi
 
-echo "Successfully created Bazzite VM ID $VMID with auto-discovered hardware!"
+echo "Successfully created Bazzite VM ID $VMID!"
